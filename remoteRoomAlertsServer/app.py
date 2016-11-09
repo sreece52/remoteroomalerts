@@ -9,13 +9,47 @@ from camera_pi import Camera
 app = Flask(__name__)
 
 GPIO.setmode(GPIO.BCM)
-
-# Create a dictionary called pins to store the pin number, name, and pin state:
-pin = {'PinNum': '18', 'pinName' : 'GPIO 18', 'state' : GPIO.LOW}
-
-# Set each pin as an output and make it low:
 GPIO.setup(18, GPIO.OUT)
-GPIO.output(18, GPIO.LOW)
+pwmHorizontal = GPIO.PWM(18, 100)
+pwmHorizontal.start(5)
+
+GPIO.setup(23, GPIO.OUT)
+pwmVertical = GPIO.PWM(23, 100)
+pwmVertical.start(5)
+
+horizontalPosition = 11.5
+verticalPosition = 11.5
+
+pwmHorizontal.ChangeDutyCycle(horizontalPosition)
+pwmVertical.ChangeDutyCycle(verticalPosition)
+
+def moveServo(direction):
+   global horizontalPosition
+   global verticalPosition
+   
+   if (direction == "Left"):
+      if (horizontalPosition < 20.5):
+         horizontalPosition += 1
+         pwmHorizontal.ChangeDutyCycle(horizontalPosition)
+   elif (direction == "Right"):
+      if (horizontalPosition > 2.5):
+         horizontalPosition -= 1
+         pwmHorizontal.ChangeDutyCycle(horizontalPosition)
+   elif (direction == "Up"):
+      if (verticalPosition > 2.5):
+         verticalPosition -= 1
+         pwmVertical.ChangeDutyCycle(verticalPosition)
+   elif (direction == "Down"):
+      if (verticalPosition < 20.5):
+         verticalPosition += 1
+         pwmVertical.ChangeDutyCycle(verticalPosition)
+   
+def gen(camera):
+   """Video streaming generator function."""
+   while True:
+      frame = camera.get_frame()
+      yield (b'--frame\r\n'
+             b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 #root directory
 # get and post allows us to rebuild the site when an action occurs
@@ -25,22 +59,10 @@ def index():
    if request.method == "GET":
       return render_template('index.html')
    else:
-      test()
+      moveServo(request.form.get("button", None))
       return render_template('index.html')
 
 
-def gen(camera):
-   """Video streaming generator function."""
-   while True:
-      frame = camera.get_frame()
-      yield (b'--frame\r\n'
-             b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-      
-def test():
-   print("button pressed")
-
- 
 @app.route('/video_feed')
 def video_feed():
    return Response(gen(Camera()),

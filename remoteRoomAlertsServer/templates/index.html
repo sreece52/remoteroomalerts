@@ -4,12 +4,22 @@
 		
 	</head>
 	<body>
-		<h1>Live Feed</h1>
-		<img src="{{ url_for('video_feed') }}">
-		<form action="/" method="post">
-			<div>
-				<input type="submit"></input>
-			<div>
-		</form>
+		<div align="center">
+			<h1>Live Feed</h1>
+			<img src="{{ url_for('video_feed') }}">
+
+			<br/><br/>
+
+			<form action="/" method="post">
+				<div>
+					<input type="submit" value="Up" name="button"></input>
+					<br/>
+					<input type="submit" value="Left" name="button"></input>
+					<input type="submit" value="Right" name="button"></input>
+					<br/>
+					<input type="submit" value="Down" name="button"></input>
+				<div>
+			</form>
+		</div>
 	</body>
 </html>
