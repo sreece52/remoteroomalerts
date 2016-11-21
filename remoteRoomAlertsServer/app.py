@@ -63,13 +63,13 @@ def takePicture():
    camera.capture(image_path)
    
    if (isMotionDetected == True):
-      #sendText()
+      #sendEmail()
       isMotionDetected = False
 
 # Message creation
 # This message format must be used because message headers must be included
 # A subject header can also be used after the To header
-def sendText():
+def sendEmail():
     img_data = open(image_path, 'rb').read()
     msg = MIMEMultipart()
     msg['Subject'] = 'Security Alert'
