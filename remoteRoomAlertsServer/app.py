@@ -46,7 +46,7 @@ isMotionDetected = False
 
 # Sender and receiver for email
 sender = "Pi"
-receiver = "stealpulse52@gmail.com"
+receiver = ""
 
 # where to save picture to
 image_path = '/home/pi/github/remoteroomalerts/remoteRoomAlertsServer/static/image.jpg'
