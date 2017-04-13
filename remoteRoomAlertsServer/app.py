@@ -50,6 +50,7 @@ server.login()
 sender = "Pi"
 receiver = "" #add email here
 
+
 # where to save picture to
 image_path = '/home/pi/github/remoteroomalerts/remoteRoomAlertsServer/static/photos/image.jpg'
 
