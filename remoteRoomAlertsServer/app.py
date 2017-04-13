@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import RPi.GPIO as GPIO
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, jsonify
 from gpiozero import MotionSensor
 import os
 from time import gmtime, strftime, sleep
@@ -9,53 +9,49 @@ import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+import Adafruit_PCA9685
 from picamera import PiCamera
 import threading
-
-# root path for files
-app = Flask(__name__)
 
 # configure the GPIO pin mode
 GPIO.setmode(GPIO.BCM)
 
-# configure pins for servos
-GPIO.setup(18, GPIO.OUT)
-pwmHorizontal = GPIO.PWM(18, 100)
-pwmHorizontal.start(5)
-GPIO.setup(23, GPIO.OUT)
-pwmVertical = GPIO.PWM(23, 100)
-pwmVertical.start(5)
+pir = MotionSensor(25) # configures gpio pin 25 as the inout for the sensor
+isMotionDetected = False
+
+# Set servos to starting position
+horizontalPosition = 350
+verticalPosition = 350
+
+# setting up the servos
+pwm = Adafruit_PCA9685.PCA9685()
+servo_min = 150
+servo_max = 600
+pwm.set_pwm_freq(60)
+pwm.set_pwm(0,0,horizontalPosition)
+pwm.set_pwm(1,0,verticalPosition)
 
 # setting up the camera
 camera = PiCamera()
 camera.rotation = 180
 
-pir = MotionSensor(25) # configures gpio pin 25 as the inout for the sensor
-isMotionDetected = False
-
 # Establish a secure session with Gmail's
 # outgoing SMTP server using your gmail account
-#server = smtplib.SMTP("smtp.gmail.com", 587)
+server = smtplib.SMTP("smtp.gmail.com", 587)
 
 # Puts the SMTP connection in TLS (Transport Layer Security Mode
 # All SMTP commands that follow will be encrypted
-#server.starttls()
+server.starttls()
 
 # Parameters: login using your Gmail address and password
-#server.login()
+server.login()
 
 # Sender and receiver for email
 sender = "Pi"
-receiver = "stealpulse52@gmail.com"
+receiver = "" #add email here
 
 # where to save picture to
-image_path = '/home/pi/github/remoteroomalerts/remoteRoomAlertsServer/static/image.jpg'
-
-# Set servos to starting position
-horizontalPosition = 11.5
-verticalPosition = 11.5
-pwmHorizontal.ChangeDutyCycle(horizontalPosition)
-pwmVertical.ChangeDutyCycle(verticalPosition)
+image_path = '/home/pi/github/remoteroomalerts/remoteRoomAlertsServer/static/photos/image.jpg'
 
 def takePicture():
    global isMotionDetected
@@ -63,7 +59,7 @@ def takePicture():
    camera.capture(image_path)
    
    if (isMotionDetected == True):
-      #sendEmail()
+      sendEmail()
       isMotionDetected = False
 
 # Message creation
@@ -80,6 +76,7 @@ def sendEmail():
     image = MIMEImage(img_data, name=os.path.basename(image_path))
     msg.attach(image)
     server.sendmail(sender, receiver, msg.as_string())
+
     
 def detectMotion():
    global isMotionDetected
@@ -98,45 +95,59 @@ def detectMotion():
          time.sleep(1) # sleep for one sec
 
 def moveServo(direction):
+
    global horizontalPosition
    global verticalPosition
-   
-   if (direction == "Left"):
-      if (horizontalPosition < 20.5):
-         horizontalPosition += 1
-         pwmHorizontal.ChangeDutyCycle(horizontalPosition)
-   elif (direction == "Right"):
-      if (horizontalPosition > 2.5):
-         horizontalPosition -= 1
-         pwmHorizontal.ChangeDutyCycle(horizontalPosition)
-   elif (direction == "Up"):
-      if (verticalPosition > 2.5):
-         verticalPosition -= 1
-         pwmVertical.ChangeDutyCycle(verticalPosition)
-   elif (direction == "Down"):
-      if (verticalPosition < 20.5):
-         verticalPosition += 1
-         pwmVertical.ChangeDutyCycle(verticalPosition)
+   servo_min = 150
+   servo_max = 600
+   increment = 10
+  
+   if (direction == "L"):
+      if (horizontalPosition < servo_max):
+         horizontalPosition += increment
+         pwm.set_pwm(0,0,horizontalPosition)
+   elif (direction == "R"):
+      if (horizontalPosition > servo_min):
+         horizontalPosition -= increment
+         pwm.set_pwm(0,0,horizontalPosition)
+   elif (direction == "U"):
+      if (verticalPosition > servo_min):
+         verticalPosition -= increment
+         pwm.set_pwm(1,0,verticalPosition)
+   elif (direction == "D"):
+      if (verticalPosition < servo_max):
+         verticalPosition += increment
+         pwm.set_pwm(1,0,verticalPosition)
+
+# root path for files
+app = Flask(__name__)
 
 @app.after_request
 def add_header(response):
    response.headers['Cache-Control'] = 'public, max-age=0'
    return response
 
+@app.route('/keydown', methods = ['POST'])
+def buttonHandle():
+   direction = request.json[0]
+   direction = str(direction)
+   direction.strip()
+   moveServo(direction)
+   return jsonify(result = 0)
+
 #root directory
 # get and post allows us to rebuild the site when an action occurs
-@app.route('/', methods=['GET','POST'])
+@app.route('/', methods = ['GET'])
 def index():   
    """Video streaming home page."""
-   if request.method == "GET":
-      return render_template('index.html')
-   else:
-      moveServo(request.form.get("button", None))
-      takePicture()
-      return render_template('index.html')
-   
+   return render_template('index.html')
+
 if __name__ == '__main__':
    motionThread = threading.Thread(target = detectMotion)
-   motionThread.start()
-   app.config['TEMPLATES_AUTO_RELOAD'] = True
-   app.run()
+   motionThread.daemon = True # allows thread to  exit when main thread exits
+   motionThread.start()    
+      
+   app.config['TEMPLATES_AUTO_RELOAD'] = True   
+   #app.run() #add ip and port here to access stream over internet
+   app.run(host='192.168.0.103', port=5000) # local connection
+   

@@ -1,25 +1,48 @@
+
 <html>
 	<head>
 		<title>Remote room alerts server</title>
-		
+		<script type="text/javascript" src="/static/js/jquery-3.2.0.min.js" charset="utf-8"></script>
 	</head>
 	<body>
 		<div align="center">
 			<h1>Room View</h1>
-			<img src="../static/image.jpg" style="width: 500px; height: 400px">
-
+			<!--<img src="http://add ip address here:8080/?action=stream"></img>-->
+			<!--local ip-->
+			<img src="http://192.168.0.103:8080/?action=stream"></img>
 			<br/><br/>
 
-			<form action="/" method="post">
-				<div>
-					<input type="submit" value="Up" name="button"></input>
+			<form action="/" method="" onsubmit="return false;">
+				<div id="arrows">
+					<input type="submit" value="Up" name="button" id="btn-up"></input>
 					<br/>
-					<input type="submit" value="Left" name="button"></input>
-					<input type="submit" value="Right" name="button"></input>
+					<input type="submit" value="Left" name="button" id="btn-left"></input>
+					<input type="submit" value="Right" name="button" id="btn-right"></input>
 					<br/>
-					<input type="submit" value="Down" name="button"></input>
-				<div>
+					<input type="submit" value="Down" name="button" id="btn-down"></input>
+				</div>
 			</form>
+
+			<script type="text/javascript" charset="utf-8">
+				// Modularize these JS functions for namespace sanitation purposes
+				(function() {
+
+					// `this` is the html element
+					function onDown(event) {
+						var val = this.value;
+						$.ajax({
+							type: "POST",
+							url: "/keydown",
+							contentType: 'application/json;charset=UTF-8',
+							data: JSON.stringify(val, null, '\t')
+						});
+					}
+
+					$(document).ready(function() {
+						$("#arrows input").mousedown(onDown);
+					})
+				})();
+			</script>
 		</div>
 	</body>
 </html>
