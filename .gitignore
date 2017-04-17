@@ -1,0 +1,5 @@
+# ignore complied python code 
+*.pyc
+
+#ignore .jpg
+*.jpg
